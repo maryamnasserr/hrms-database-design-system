@@ -1,0 +1,256 @@
+-- Employee & Workforce Calculations
+
+DELIMITER $$
+
+CREATE FUNCTION getEmployeeFullName(empID INT)
+RETURNS VARCHAR(200)
+DETERMINISTIC
+BEGIN 
+    DECLARE fullName VARCHAR(200);
+
+    SELECT CONCAT_WS(' ', First_Name, Middle_Name, Last_Name)
+    INTO fullName
+    FROM EMPLOYEE
+    WHERE Employee_ID = empID;
+
+    RETURN fullName;
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE FUNCTION getEmployeeAge(dob DATE)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    RETURN TIMESTAMPDIFF(YEAR, dob, CURDATE());
+END$$
+
+DELIMITER ;
+
+
+DELIMITER $$
+
+CREATE FUNCTION getServiceYears(empID INT)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE startDate DATE;
+
+    -- get earliest assignment date
+    SELECT MIN(START_DATE)
+    INTO startDate
+    FROM JOB_ASSIGNMENT
+    WHERE EMPLOYEE_ID = empID;
+
+    IF startDate IS NULL THEN
+        RETURN 0;
+    END IF;
+
+    RETURN TIMESTAMPDIFF(YEAR, startDate, CURDATE());
+END$$
+
+DELIMITER ;
+
+
+--  Performance Calculations
+
+DELIMITER $$
+
+CREATE FUNCTION calcKpiScore(actual DECIMAL(10,2), target DECIMAL(10,2))
+RETURNS DECIMAL(5,2)
+DETERMINISTIC
+BEGIN
+    IF target = 0 THEN 
+        RETURN 0;
+    END IF;
+
+    RETURN (actual / target) * 100;
+END$$
+
+DELIMITER ;
+
+
+DELIMITER $$
+
+CREATE FUNCTION calcWeightedKpiScore(score DECIMAL(5,2), weight DECIMAL(5,2))
+RETURNS DECIMAL(6,2)
+DETERMINISTIC
+BEGIN
+    RETURN (score * weight) / 100;
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE FUNCTION getTotalObjectiveWeight(jobID INT)
+RETURNS DECIMAL(6,2)
+DETERMINISTIC
+BEGIN
+    DECLARE totalWeight DECIMAL(6,2);
+
+    SELECT SUM(Weight)
+    INTO totalWeight
+    FROM JOB_OBJECTIVE
+    WHERE Job_ID = jobID;
+
+    RETURN IFNULL(totalWeight, 0);
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE FUNCTION getCycleDuration(performanceID INT)
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE sDate DATE;
+    DECLARE eDate DATE;
+
+    SELECT PERFORMANCE_START_DATE, PERFORMANCE_END_DATE
+    INTO sDate, eDate
+    FROM PERFORMANCE_CYCLE
+    WHERE Performance_ID = performanceID;
+
+    IF sDate IS NULL OR eDate IS NULL THEN
+        RETURN 0;
+    END IF;
+
+    RETURN DATEDIFF(eDate, sDate);
+END$$
+
+DELIMITER ;
+##Dashboard Summary Calculations
+DELIMITER $$
+
+CREATE FUNCTION getTotalEmployees()
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total INT;
+
+    SELECT COUNT(*) INTO total
+    FROM EMPLOYEE;
+
+    RETURN total;
+END$$
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE FUNCTION getActiveEmployees()
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total INT;
+
+    SELECT COUNT(*) INTO total
+    FROM EMPLOYEE
+    WHERE Employment_Status = 'Active';
+
+    RETURN total;
+END$$
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE FUNCTION getTotalJobs()
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total INT;
+
+    SELECT COUNT(*) INTO total
+    FROM JOB;
+
+    RETURN total;
+END$$
+DELIMITER ;
+
+DELIMITER $$
+CREATE FUNCTION getActiveJobs()
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total INT;
+    
+    SELECT COUNT(*) INTO total
+    FROM JOB
+    WHERE Status = 'Active';
+    RETURN total;
+    
+END$$
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE FUNCTION getTotalTrainingPrograms()
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total INT;
+
+    SELECT COUNT(*) INTO total
+    FROM TRAINING_PROGRAM;
+
+    RETURN total;
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE FUNCTION getTotalIssuedCertificates()
+RETURNS INT
+DETERMINISTIC
+BEGIN
+    DECLARE total INT;
+
+    SELECT COUNT(*) INTO total
+    FROM TRAINING_CERTIFICATE;
+
+    RETURN total;
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE FUNCTION getKpiCompletionRate()
+RETURNS DECIMAL(6,2)
+DETERMINISTIC
+BEGIN
+    DECLARE totalKpis INT;
+    DECLARE completedKpis INT;
+
+    SELECT COUNT(*) INTO totalKpis FROM OBJECTIVE_KPI;
+    SELECT COUNT(*) INTO completedKpis FROM EMPLOYEE_KPI_SCORE;
+
+    IF totalKpis = 0 THEN
+        RETURN 0;
+    END IF;
+
+    RETURN (completedKpis / totalKpis) * 100;
+END$$
+
+DELIMITER ;
+
+DELIMITER $$
+
+CREATE FUNCTION getAverageAppraisalScore()
+RETURNS DECIMAL(6,2)
+DETERMINISTIC
+BEGIN
+    DECLARE avgScore DECIMAL(6,2);
+
+    SELECT AVG(APPRAISAL_OVERALSCORE) INTO avgScore
+    FROM APPRAISAL;
+
+    RETURN IFNULL(avgScore, 0);
+END$$
+
+DELIMITER ;
+
